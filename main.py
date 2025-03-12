@@ -1,138 +1,111 @@
 import networkx as nx
 import random
 import time
-import matplotlib.pyplot as plt
-import numpy as np
 
 
-def generate_weighted_graph(num_vertices, num_edges):
-    G = nx.Graph()
-    G.add_nodes_from(range(num_vertices))
+def criar_grafo_ponderado(qtd_vertices, qtd_arestas):
+    grafo = nx.Graph()
+    grafo.add_nodes_from(range(qtd_vertices))
 
-    for node in range(num_vertices):
-        edges = random.sample(range(num_vertices), num_edges)
-        for edge in edges:
-            if node != edge:
-                weight = random.randint(1, 10)  # Arestas com pesos aleatórios
-                G.add_edge(node, edge, weight=weight)
+    for vertice in range(qtd_vertices):
+        vizinhos = random.sample(range(qtd_vertices), min(qtd_arestas, qtd_vertices - 1))
+        for vizinho in vizinhos:
+            if vertice != vizinho:
+                peso = random.randint(1, 10)
+                grafo.add_edge(vertice, vizinho, weight=peso)
 
-    return G
+    return grafo
 
 
-def bfs(graph, start, goal):
-    start_time = time.time()
-    queue = [(start, [start])]
-    visited = set()
-    path_found = None
+def busca_em_largura(grafo, inicio, destino):
+    inicio_tempo = time.time()
+    fila = [(inicio, [inicio])]
+    visitados = set()
 
-    while queue:
-        (vertex, path) = queue.pop(0)
-        if vertex in visited:
+    while fila:
+        no_atual, caminho = fila.pop(0)
+        if no_atual in visitados:
             continue
-        visited.add(vertex)
-        for neighbor in graph[vertex]:
-            if neighbor == goal:
-                end_time = time.time()
-                path_found = path + [neighbor]
-                return path_found, end_time - start_time
-            else:
-                queue.append((neighbor, path + [neighbor]))
-    return path_found, None
+        visitados.add(no_atual)
 
-
-def dfs(graph, start, goal, path=None, visited=None, start_time=None, depth_limit=500):
-    if path is None:
-        path = [start]
-    if visited is None:
-        visited = set()
-    if start_time is None:
-        start_time = time.time()
-    if depth_limit <= 0:
-        return None, None
-
-    visited.add(start)
-    if start == goal:
-        return path, time.time() - start_time
-
-    for neighbor in graph.neighbors(start):
-        if neighbor not in visited:
-            result, exec_time = dfs(graph, neighbor, goal, path + [neighbor], visited, start_time, depth_limit - 1)
-            if result is not None:
-                return result, exec_time
+        for vizinho in grafo[no_atual]:
+            if vizinho == destino:
+                return caminho + [vizinho], time.time() - inicio_tempo
+            fila.append((vizinho, caminho + [vizinho]))
 
     return None, None
 
 
-def depth_limited_search(graph, start, goal, limit, path=None):
-    if path is None:
-        path = [start]
-    if start == goal:
-        return path
-    if limit <= 0:
+def busca_em_profundidade(grafo, inicio, destino, caminho=None, visitados=None, inicio_tempo=None, limite=500):
+    if caminho is None:
+        caminho = [inicio]
+    if visitados is None:
+        visitados = set()
+    if inicio_tempo is None:
+        inicio_tempo = time.time()
+    if limite <= 0:
+        return None, None
+
+    visitados.add(inicio)
+    if inicio == destino:
+        return caminho, time.time() - inicio_tempo
+
+    for vizinho in grafo.neighbors(inicio):
+        if vizinho not in visitados:
+            resultado, tempo_exec = busca_em_profundidade(grafo, vizinho, destino, caminho + [vizinho], visitados, inicio_tempo, limite - 1)
+            if resultado:
+                return resultado, tempo_exec
+
+    return None, None
+
+
+def busca_limitada(grafo, inicio, destino, limite, caminho=None):
+    if caminho is None:
+        caminho = [inicio]
+    if inicio == destino:
+        return caminho
+    if limite <= 0:
         return None
 
-    for neighbor in graph.neighbors(start):
-        if neighbor not in path:
-            new_path = depth_limited_search(graph, neighbor, goal, limit - 1, path + [neighbor])
-            if new_path:
-                return new_path
+    for vizinho in grafo.neighbors(inicio):
+        if vizinho not in caminho:
+            novo_caminho = busca_limitada(grafo, vizinho, destino, limite - 1, caminho + [vizinho])
+            if novo_caminho:
+                return novo_caminho
 
     return None
 
 
-def plot_graph(graph, path=None):
-    pos = nx.spring_layout(graph, seed=42)  # Usar uma semente fixa para garantir layout consistente
-    plt.figure(figsize=(10, 8))
-
-    # Desenhando o grafo
-    nx.draw(graph, pos, with_labels=True, node_size=700, node_color="lightblue", font_size=12, font_weight="bold", edge_color='gray', alpha=0.6)
-
-    # Destacando as arestas do caminho em vermelho
-    if path:
-        edges_in_path = [(path[i], path[i+1]) for i in range(len(path)-1)]
-        nx.draw_networkx_edges(graph, pos, edgelist=edges_in_path, edge_color='red', width=2, alpha=0.8)
-
-    # Desenhando os pesos das arestas de forma destacada
-    edge_labels = nx.get_edge_attributes(graph, 'weight')
-    nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels, font_size=10, font_color='black')
-
-    # Ajustando o título
-    plt.title("Visualização do Grafo com Caminho Destacado", fontsize=16)
-    plt.axis('off')  # Desligando os eixos para uma visualização mais limpa
-    plt.show()
-
-
 if __name__ == "__main__":
-    parameters = [(500, 3), (500, 5), (500, 7), (5000, 3), (5000, 5), (5000, 7), (10000, 3), (10000, 5), (10000, 7)]
-    results = []
+    parametros = [(500, 3), (500, 5), (500, 7), (5000, 3), (5000, 5), (5000, 7), (10000, 3), (10000, 5), (10000, 7)]
 
-    for vertices, edges in parameters:
-        graph = generate_weighted_graph(vertices, edges)
-        start, goal = random.choice(list(graph.nodes)), random.choice(list(graph.nodes))
+    for vertices, arestas in parametros:
+        grafo = criar_grafo_ponderado(vertices, arestas)
+        origem, destino = random.sample(list(grafo.nodes), 2)
 
-        # Buscas
-        path_bfs, time_bfs = bfs(graph, start, goal)
-        path_dfs, time_dfs = dfs(graph, start, goal)
-        path_dls = depth_limited_search(graph, start, goal, limit=10)
+        caminho_bfs, tempo_bfs = busca_em_largura(grafo, origem, destino)
+        caminho_dfs, tempo_dfs = busca_em_profundidade(grafo, origem, destino)
+        caminho_dls = busca_limitada(grafo, origem, destino, limite=10)
 
-        # Visualização do comportamento
-        if path_bfs:
-            print(f"BFS - Caminho: {path_bfs}, Tempo: {time_bfs:.6f}s")
-            plot_graph(graph, path_bfs)
-        if path_dfs:
-            print(f"DFS - Caminho: {path_dfs}, Tempo: {time_dfs:.6f}s")
-            plot_graph(graph, path_dfs)
-        if path_dls:
-            print(f"DLS - Caminho: {path_dls}")
-            plot_graph(graph, path_dls)
+        print(f"\nGrafo com {vertices} vértices e {arestas} arestas por vértice")
+        print(f"Origem: {origem}, Destino: {destino}")
 
-        # Armazenar os resultados
-        results.append((vertices, edges, start, goal, len(path_bfs) if path_bfs else None, time_bfs,
-                        len(path_dfs) if path_dfs else None, time_dfs,
-                        len(path_dls) if path_dls else None))
+        if caminho_bfs:
+            print(f"BFS - Caminho encontrado ({len(caminho_bfs)} nós), Tempo: {tempo_bfs:.6f}s")
+            print(f"Caminho: {caminho_bfs}")
+        else:
+            print("BFS - Caminho não encontrado")
 
-    for res in results:
-        print(f"Vértices: {res[0]}, Arestas: {res[1]}, Início: {res[2]}, Fim: {res[3]}\n"
-              f"BFS - Caminho: {res[4]}, Tempo: {res[5]:.6f}s\n"
-              f"DFS - Caminho: {res[6]}, Tempo: {res[7]:.6f}s\n"
-              f"DLS - Caminho: {res[8]}\n")
+        if caminho_dfs:
+            print(f"DFS - Caminho encontrado ({len(caminho_dfs)} nós), Tempo: {tempo_dfs:.6f}s")
+            print(f"Caminho: {caminho_dfs}")
+        else:
+            print("DFS - Caminho não encontrado")
+
+        if caminho_dls:
+            print(f"DLS - Caminho encontrado ({len(caminho_dls)} nós)")
+            print(f"Caminho: {caminho_dls}")
+        else:
+            print("DLS - Caminho não encontrado")
+
+        print("-" * 50)
